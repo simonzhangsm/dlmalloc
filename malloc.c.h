@@ -565,13 +565,6 @@ extern "C" {
 
 #include <stdlib.h>
 #include <cache.h>
-
-
-////////////////////////////////////////////////////////////////////////////
-// Architecture-Dependent Constants
-////////////////////////////////////////////////////////////////////////////
-// Currently, SSMalloc targets only the 64-bit environment.
-
     
 static inline int get_core_id(void) {
     int result;
@@ -642,7 +635,7 @@ static inline int has_cpuid(void){
         xor edx, eax
         jz done
         mov has, 1
-    done:
+        done:
     }
 	#elif defined(_MSC_VER) && defined(_M_X64)
     has = 1;
@@ -663,22 +656,22 @@ static inline void cpuid(size_t *eax, size_t *ebx, size_t *ecx, size_t *edx){
 #if defined(__APPLE__)
     #include <sys/time.h>
     #include <sys/sysctl.h>
-    static size_t get_cachelinesize(){
+    static inline size_t get_cachelinesize(){
         if(has_cpuid()){
             size_t eax=1, ebx, ecx, edx;
             cpuid(&eax,&ebx,&ecx,&edx);
             return ((ebx>>8)&0xff)*8;
         }
     
-        size_t lineSize = 0;
-        size_t sizeOfLineSize = sizeof(lineSize);
-        sysctlbyname("hw.cachelinesize", &lineSize, &sizeOfLineSize, 0, 0);
-        return lineSize;
+        size_t LineSize = 0;
+        size_t sizeOfLineSize = sizeof(LineSize);
+        sysctlbyname("hw.cachelinesize", &LineSize, &sizeOfLineSize, 0, 0);
+        return LineSize;
     }
 #elif defined(_WIN32)
             
     #include <windows.h>
-    static size_t get_cachelinesize(){
+    static inline size_t get_cachelinesize(){
         if(has_cpuid()){
             size_t eax=1, ebx, ecx, edx;
             cpuid(&eax,&ebx,&ecx,&edx);
@@ -706,7 +699,7 @@ static inline void cpuid(size_t *eax, size_t *ebx, size_t *ecx, size_t *edx){
     }
 #elif defined(__linux__)
     
-    static size_t get_cachelinesize(){
+    static inline size_t get_cachelinesize(){
         if(has_cpuid()){
             size_t eax=1, ebx, ecx, edx;
             cpuid(&eax,&ebx,&ecx,&edx);
@@ -775,14 +768,14 @@ static inline void cpuid(size_t *eax, size_t *ebx, size_t *ecx, size_t *edx){
 		#define HAVE_MORECORE 0
 		#define HAVE_MMAP 1
 		/* OSX allocators provide 16 byte alignment */
-		#ifndef MALLOC_ALIGNMENT
-			#define MALLOC_ALIGNMENT ((size_t)16U)
-		#endif  /* MALLOC_ALIGNMENT */
+        //#ifndef MALLOC_ALIGNMENT
+        //      #define MALLOC_ALIGNMENT get_cachelinesize() //((size_t)16U)
+        //	#endif  /* MALLOC_ALIGNMENT */
 	#endif  /* HAVE_MORECORE */
 #endif  /* DARWIN */
 
 #ifndef MALLOC_ALIGNMENT
-    #define MALLOC_ALIGNMENT ((size_t)(2 * sizeof(void *)))
+    #define MALLOC_ALIGNMENT get_cachelinesize() //((size_t)(2 * sizeof(void *)))
 #endif  /* MALLOC_ALIGNMENT */
 
 #ifndef LACKS_SYS_TYPES_H
